@@ -21,10 +21,23 @@
   const sidebarToggle = $('#sidebarToggle');
   const sidebarOverlay = $('#sidebarOverlay');
 
+  // File Upload Elements
+  const fileInput = $('#fileInput');
+  const attachBtn = $('#attachBtn');
+  const filePreviewContainer = $('#filePreviewContainer');
+  const imagePreview = $('#imagePreview');
+  const fileIconPreview = $('#fileIconPreview');
+  const fileName = $('#fileName');
+  const fileSize = $('#fileSize');
+  const removeFileBtn = $('#removeFileBtn');
+
   // --------------- State ---------------
   let conversationHistory = [];
   let isGenerating = false;
   let currentController = null;
+  let currentMedia = null; // { data: base64, mimeType: string, name: string, isImage: boolean }
+
+  const MAX_FILE_SIZE = 3.5 * 1024 * 1024; // 3.5 MB limit for Vercel Hobby
 
   // --------------- Marked Configuration ---------------
   if (typeof marked !== 'undefined') {
@@ -72,7 +85,8 @@
 
   function updateSendButton() {
     const hasText = messageInput.value.trim().length > 0;
-    sendBtn.disabled = !hasText || isGenerating;
+    const hasMedia = currentMedia !== null;
+    sendBtn.disabled = (!hasText && !hasMedia) || isGenerating;
   }
 
   function updateCharCount() {
@@ -82,7 +96,7 @@
 
   // --------------- Message Rendering ---------------
 
-  function createMessageElement(role, content, isStreaming = false) {
+  function createMessageElement(role, content, isStreaming = false, media = null) {
     const div = document.createElement('div');
     div.className = `message ${role}`;
 
@@ -96,17 +110,39 @@
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble';
 
+    // Add media if present
+    if (media && role === 'user') {
+      const mediaContainer = document.createElement('div');
+      
+      if (media.isImage) {
+        mediaContainer.className = 'message-media-container';
+        const img = document.createElement('img');
+        img.src = `data:${media.mimeType};base64,${media.data}`;
+        mediaContainer.appendChild(img);
+      } else {
+        mediaContainer.className = 'message-file-attachment';
+        mediaContainer.innerHTML = `
+          <div class="message-file-icon">📄</div>
+          <div class="message-file-name">${escapeHtml(media.name)}</div>
+        `;
+      }
+      contentWrapper.appendChild(mediaContainer);
+    }
+
     if (role === 'user') {
-      bubble.textContent = content;
+      if (content) {
+        bubble.textContent = content;
+        contentWrapper.appendChild(bubble);
+      }
     } else {
       if (isStreaming) {
         bubble.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
       } else {
         bubble.innerHTML = renderMarkdown(content);
       }
+      contentWrapper.appendChild(bubble);
     }
 
-    contentWrapper.appendChild(bubble);
     div.appendChild(avatar);
     div.appendChild(contentWrapper);
 
@@ -128,7 +164,7 @@
   // --------------- Chat Logic ---------------
 
   async function sendMessage(text) {
-    if (!text.trim() || isGenerating) return;
+    if ((!text.trim() && !currentMedia) || isGenerating) return;
 
     const userMessage = text.trim();
     isGenerating = true;
@@ -139,19 +175,28 @@
 
     // Update title on first message
     if (conversationHistory.length === 0) {
-      const shortTitle = userMessage.length > 50
-        ? userMessage.substring(0, 50) + '...'
-        : userMessage;
+      const titleText = userMessage || (currentMedia ? currentMedia.name : 'New Conversation');
+      const shortTitle = titleText.length > 50
+        ? titleText.substring(0, 50) + '...'
+        : titleText;
       chatTitle.textContent = shortTitle;
     }
 
     // Add user message to DOM
-    const userEl = createMessageElement('user', userMessage);
+    const userEl = createMessageElement('user', userMessage, false, currentMedia);
     messagesContainer.appendChild(userEl);
     scrollToBottom();
 
     // Add to history
-    conversationHistory.push({ role: 'user', content: userMessage });
+    const historyEntry = { role: 'user', content: userMessage };
+    if (currentMedia) {
+      historyEntry.media = currentMedia;
+    }
+    conversationHistory.push(historyEntry);
+
+    // Save media to send, then clear UI
+    const mediaToSend = currentMedia;
+    clearFile();
 
     // Clear input
     messageInput.value = '';
@@ -170,13 +215,26 @@
     try {
       currentController = new AbortController();
 
+      const payload = {
+        message: userMessage,
+        history: conversationHistory.slice(0, -1).map(h => ({
+          role: h.role,
+          content: h.content,
+          // Exclude media from history to save bandwidth, Gemini handles it poorly in history anyway
+        }))
+      };
+
+      if (mediaToSend) {
+        payload.media = {
+          data: mediaToSend.data,
+          mimeType: mediaToSend.mimeType
+        };
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          history: conversationHistory.slice(0, -1), // Exclude the message we just added
-        }),
+        body: JSON.stringify(payload),
         signal: currentController.signal,
       });
 
@@ -242,6 +300,7 @@
 
   function clearChat() {
     conversationHistory = [];
+    clearFile();
     // Remove all messages
     const messages = messagesContainer.querySelectorAll('.message');
     messages.forEach((msg) => msg.remove());
@@ -251,6 +310,65 @@
     setStatus('Ready', 'online');
     messageInput.focus();
   }
+
+  // --------------- File Handling Logic ---------------
+
+  function clearFile() {
+    currentMedia = null;
+    fileInput.value = '';
+    filePreviewContainer.style.display = 'none';
+    imagePreview.src = '';
+    updateSendButton();
+    messageInput.focus();
+  }
+
+  attachBtn.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  removeFileBtn.addEventListener('click', clearFile);
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`File is too large. Max size is 3.5 MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)} MB.`);
+      clearFile();
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Data = event.target.result.split(',')[1];
+      const isImage = file.type.startsWith('image/');
+      
+      currentMedia = {
+        data: base64Data,
+        mimeType: file.type || 'text/plain',
+        name: file.name,
+        isImage: isImage
+      };
+
+      // Update UI
+      fileName.textContent = file.name;
+      fileSize.textContent = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+      
+      if (isImage) {
+        imagePreview.src = event.target.result;
+        imagePreview.style.display = 'block';
+        fileIconPreview.style.display = 'none';
+      } else {
+        imagePreview.style.display = 'none';
+        fileIconPreview.style.display = 'flex';
+      }
+
+      filePreviewContainer.style.display = 'block';
+      updateSendButton();
+      messageInput.focus();
+    };
+    reader.readAsDataURL(file);
+  });
 
   // --------------- Event Listeners ---------------
 

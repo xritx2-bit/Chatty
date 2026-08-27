@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 
 // --------------- Middleware ---------------
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Security headers
@@ -77,13 +77,13 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
       });
     }
 
-    const { message, history } = req.body;
+    const { message, history, media } = req.body;
 
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({ error: 'Message is required.' });
+    if (!message && !media) {
+      return res.status(400).json({ error: 'Message or media is required.' });
     }
 
-    if (message.length > 10000) {
+    if (message && message.length > 10000) {
       return res.status(400).json({ error: 'Message too long. Please keep it under 10,000 characters.' });
     }
 
@@ -91,10 +91,14 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     const chatHistory = [];
     if (Array.isArray(history)) {
       for (const msg of history.slice(-20)) { // Keep last 20 messages for context
-        if (msg.role && msg.content) {
+        if (msg.role && (msg.content || msg.media)) {
+          const parts = [];
+          if (msg.content) parts.push({ text: msg.content });
+          // Note: Gemini history API doesn't always support inlineData from user seamlessly across multi-turn,
+          // but we'll try to include it if available, or just rely on text context.
           chatHistory.push({
             role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.content }],
+            parts: parts,
           });
         }
       }
@@ -103,13 +107,30 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     // Start chat with history
     const chat = model.startChat({ history: chatHistory });
 
+    // Prepare current message parts
+    const currentMessageParts = [];
+    if (message) {
+      currentMessageParts.push({ text: message });
+    } else {
+      currentMessageParts.push({ text: "Describe this image/file." });
+    }
+
+    if (media && media.data && media.mimeType) {
+      currentMessageParts.push({
+        inlineData: {
+          data: media.data,
+          mimeType: media.mimeType
+        }
+      });
+    }
+
     // Stream the response
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
-    const result = await chat.sendMessageStream(message);
+    const result = await chat.sendMessageStream(currentMessageParts);
 
     for await (const chunk of result.stream) {
       const text = chunk.text();
