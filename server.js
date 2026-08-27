@@ -134,7 +134,7 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     }
 
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Something went wrong. Please try again.' });
+      res.status(500).json({ error: `Server Error: ${error.message}` });
     } else {
       res.end();
     }
