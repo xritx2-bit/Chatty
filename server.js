@@ -148,13 +148,17 @@ app.get('*', (req, res) => {
 
 // --------------- Start Server ---------------
 
-app.listen(PORT, () => {
-  console.log(`
-  ╔═══════════════════════════════════════════╗
-  ║        🧬 Chatty Server                   ║
-  ║                                           ║
-  ║   Running on: http://localhost:${PORT}       ║
-  ║   Gemini:     ${geminiReady ? '✅ Connected' : '❌ Not configured'}            ║
-  ╚═══════════════════════════════════════════╝
-  `);
-});
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`
+    ╔═══════════════════════════════════════════╗
+    ║        🧬 Chatty Server                   ║
+    ║                                           ║
+    ║   Running on: http://localhost:${PORT}       ║
+    ║   Gemini:     ${geminiReady ? '✅ Connected' : '❌ Not configured'}            ║
+    ╚═══════════════════════════════════════════╝
+    `);
+  });
+}
+
+module.exports = app;
