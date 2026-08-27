@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Chatty — Free AI tutor for Nanotechnology, Biotechnology, AI/ML, and Cognitive Science students.">
+  <meta name="theme-color" content="#0a0b1a">
+  <title>Chatty — AI Study Buddy</title>
+  <link rel="icon" type="image/jpeg" href="logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">
+            <img src="logo.jpg" alt="Chatty Logo" class="logo-img">
+          </div>
+          <div class="logo-text">
+            <h1>Chatty</h1>
+            <span class="logo-subtitle">AI Study Buddy</span>
+          </div>
+        </div>
+        <button class="new-chat-btn" id="newChatBtn" title="New Chat">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-section-title">Quick Topics</h3>
+        <div class="topic-chips" id="topicChips">
+          <button class="topic-chip nano" data-prompt="Explain the basics of nanotechnology and its applications">
+            <span class="chip-dot"></span>Nanotechnology
+          </button>
+          <button class="topic-chip bio" data-prompt="Explain the central dogma of molecular biology">
+            <span class="chip-dot"></span>Biotechnology
+          </button>
+          <button class="topic-chip biochem" data-prompt="Explain enzyme kinetics and the Michaelis-Menten equation">
+            <span class="chip-dot"></span>Biochemistry
+          </button>
+          <button class="topic-chip aiml" data-prompt="Explain how neural networks learn through backpropagation">
+            <span class="chip-dot"></span>AI & ML
+          </button>
+          <button class="topic-chip cogsci" data-prompt="Explain the major theories of consciousness in cognitive science">
+            <span class="chip-dot"></span>Cognitive Science
+          </button>
+          <button class="topic-chip nbic" data-prompt="Explain NBIC convergence and how Nano, Bio, Info, and Cogno technologies connect">
+            <span class="chip-dot"></span>NBIC Convergence
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-section-title">Exam Helpers</h3>
+        <div class="topic-chips">
+          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on nanotechnology with brief answers">
+            📝 Nano Questions
+          </button>
+          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on biotechnology and biochemistry with brief answers">
+            📝 Bio Questions
+          </button>
+          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on machine learning with brief answers">
+            📝 AI/ML Questions
+          </button>
+          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on cognitive science with brief answers">
+            📝 CogSci Questions
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-text">
+          Built with 💜 for NBIC Students
+          <br>
+          <span class="footer-small">Powered by Google Gemini</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile sidebar toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+
+    <!-- Main Chat Area -->
+    <main class="chat-main">
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="chat-header-left">
+          <h2 class="chat-title" id="chatTitle">New Conversation</h2>
+          <span class="chat-status" id="chatStatus">
+            <span class="status-dot online"></span>
+            Ready
+          </span>
+        </div>
+        <div class="chat-header-right">
+          <button class="header-btn" id="clearChatBtn" title="Clear chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages Container -->
+      <div class="messages-container" id="messagesContainer">
+        <!-- Welcome Screen -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-icon">
+            <div class="welcome-orb">
+              <div class="orb-ring ring-1"></div>
+              <div class="orb-ring ring-2"></div>
+              <div class="orb-ring ring-3"></div>
+              <img src="logo.jpg" alt="Chatty" class="orb-core-img">
+            </div>
+          </div>
+          <h2 class="welcome-title">Welcome to <span class="gradient-text">Chatty</span></h2>
+          <p class="welcome-subtitle">Your AI tutor for Nanotechnology, Biotechnology, AI/ML &amp; Cognitive Science</p>
+
+          <div class="welcome-cards">
+            <div class="welcome-card" data-prompt="Explain quantum dots and their applications in nanotechnology and biomedicine">
+              <div class="card-icon nano-icon">🔬</div>
+              <h3>Nanotechnology</h3>
+              <p>Quantum dots, CNTs, nanofabrication, nanomedicine</p>
+            </div>
+            <div class="welcome-card" data-prompt="Explain CRISPR-Cas9 gene editing — how it works, its applications, and ethical considerations">
+              <div class="card-icon bio-icon">🧬</div>
+              <h3>Biotechnology</h3>
+              <p>CRISPR, genetic engineering, bioinformatics</p>
+            </div>
+            <div class="welcome-card" data-prompt="Explain how transformer architecture works in deep learning, from attention mechanism to GPT">
+              <div class="card-icon aiml-icon">🤖</div>
+              <h3>AI & Machine Learning</h3>
+              <p>Neural networks, transformers, deep learning</p>
+            </div>
+            <div class="welcome-card" data-prompt="Explain the neural basis of memory formation and the different types of memory systems">
+              <div class="card-icon cogsci-icon">🧠</div>
+              <h3>Cognitive Science</h3>
+              <p>Neuroscience, consciousness, perception</p>
+            </div>
+          </div>
+
+          <p class="welcome-hint">Click a card above or type your question below to get started</p>
+        </div>
+
+        <!-- Messages will be inserted here -->
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-container">
+          <div class="input-wrapper">
+            <textarea
+              id="messageInput"
+              class="message-input"
+              placeholder="Ask Chatty anything about Nano, Bio, AI/ML, or Cognitive Science..."
+              rows="1"
+              maxlength="10000"
+            ></textarea>
+            <button class="send-btn" id="sendBtn" disabled title="Send message (Enter)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+          <div class="input-footer">
+            <span class="char-count" id="charCount">0 / 10,000</span>
+            <span class="input-hint">Enter to send · Shift+Enter for new line</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Developer Credit Badge -->
+    <div class="dev-badge" id="devBadge">
+      <span class="dev-badge-icon">⚡</span>
+      <span class="dev-badge-text">Developed by <strong>Ritesh</strong></span>
+    </div>
+  </div>
+
+  <!-- Markdown rendering (via marked.js from CDN for simplicity) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
