@@ -1267,7 +1267,15 @@ async function handleGoogleSignIn() {
   } catch (error) {
     console.error('Google Sign-In failed:', error);
     authErrorMsg.style.display = 'block';
-    authErrorMsg.textContent = error.message || 'Google sign-in was closed or failed.';
+    if (error.code === 'auth/unauthorized-domain') {
+      authErrorMsg.innerHTML = `⚠️ <strong>Domain Not Authorized:</strong> Please add <code>${window.location.hostname}</code> to your Firebase Console under <strong>Authentication &rarr; Settings &rarr; Authorized domains</strong>.`;
+    } else if (error.code === 'auth/popup-blocked') {
+      authErrorMsg.textContent = 'Popup was blocked by your browser. Please allow popups for this site and try again.';
+    } else if (error.code === 'auth/popup-closed-by-user') {
+      authErrorMsg.textContent = 'Sign-in window was closed before completing.';
+    } else {
+      authErrorMsg.textContent = error.message ? error.message.replace('Firebase: ', '') : 'Google sign-in failed.';
+    }
   } finally {
     googleSignInActionBtn.disabled = false;
     googleSignInActionBtn.style.opacity = '1';
