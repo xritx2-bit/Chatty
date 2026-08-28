@@ -4,6 +4,7 @@
   "description": "AI Study Buddy for NBIC Convergence — Nanotechnology, Biotechnology, AI/ML & Cognitive Science",
   "main": "server.js",
   "scripts": {
+    "build": "echo 'Build complete'",
     "start": "node server.js",
     "dev": "node server.js"
   },
@@ -11,7 +12,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@google/genai": "^2.19.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",

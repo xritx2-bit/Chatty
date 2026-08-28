@@ -1,0 +1,26 @@
+{
+  "name": "Chatty — Precision AI Study Buddy",
+  "short_name": "Chatty AI",
+  "description": "Precision AI Study Buddy for Nanotechnology, Biotechnology, AI/ML, Cognitive Science & STEM students.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#030814",
+  "theme_color": "#0c1f4a",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

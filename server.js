@@ -7,29 +7,28 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const { SYSTEM_PROMPT } = require('./system-prompt');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 // --------------- Middleware ---------------
 
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Security headers
+// Security headers (allowing iframe embedding for AI Studio preview)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
 
-// Rate limiting: 30 requests per minute per IP
+// Rate limiting: 60 requests per minute per IP
 const chatLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 60,
   message: { error: 'Too many requests. Please wait a moment before sending another message.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -37,33 +36,29 @@ const chatLimiter = rateLimit({
 
 // --------------- Gemini Setup ---------------
 
-let genAI = null;
-let model = null;
-
-function initializeGemini() {
+function getGenAI() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    console.warn('⚠️  GEMINI_API_KEY not set. Chat will return an error message.');
-    return false;
+    return null;
   }
-  genAI = new GoogleGenerativeAI(apiKey);
-  model = genAI.getGenerativeModel({
-    model: 'gemini-3.6-flash',
-    systemInstruction: SYSTEM_PROMPT,
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
   });
-  console.log('✅ Gemini API initialized successfully');
-  return true;
 }
-
-const geminiReady = initializeGemini();
 
 // --------------- API Routes ---------------
 
-// Health check for Railway
+// Health check
 app.get('/api/health', (req, res) => {
+  const ai = getGenAI();
   res.json({
     status: 'ok',
-    gemini: geminiReady ? 'connected' : 'not configured',
+    gemini: ai ? 'connected' : 'not configured',
     timestamp: new Date().toISOString(),
   });
 });
@@ -71,9 +66,10 @@ app.get('/api/health', (req, res) => {
 // Chat endpoint with streaming
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
-    if (!geminiReady) {
+    const ai = getGenAI();
+    if (!ai) {
       return res.status(503).json({
-        error: 'API key not configured. Please set GEMINI_API_KEY environment variable.',
+        error: 'Gemini API key is not configured. Please set GEMINI_API_KEY in your environment or Settings > Secrets.',
       });
     }
 
@@ -87,42 +83,41 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Message too long. Please keep it under 10,000 characters.' });
     }
 
-    // Build conversation history for Gemini
-    const chatHistory = [];
+    // Build contents array for multi-turn chat in @google/genai
+    const contents = [];
+
     if (Array.isArray(history)) {
-      for (const msg of history.slice(-20)) { // Keep last 20 messages for context
-        if (msg.role && (msg.content || msg.media)) {
-          const parts = [];
-          if (msg.content) parts.push({ text: msg.content });
-          // Note: Gemini history API doesn't always support inlineData from user seamlessly across multi-turn,
-          // but we'll try to include it if available, or just rely on text context.
-          chatHistory.push({
+      for (const msg of history.slice(-20)) {
+        if (msg.role && msg.content) {
+          contents.push({
             role: msg.role === 'user' ? 'user' : 'model',
-            parts: parts,
+            parts: [{ text: msg.content }],
           });
         }
       }
     }
 
-    // Start chat with history
-    const chat = model.startChat({ history: chatHistory });
-
-    // Prepare current message parts
-    const currentMessageParts = [];
+    // Current turn parts
+    const currentParts = [];
     if (message) {
-      currentMessageParts.push({ text: message });
+      currentParts.push({ text: message });
     } else {
-      currentMessageParts.push({ text: "Describe this image/file." });
+      currentParts.push({ text: 'Please analyze and explain this attachment.' });
     }
 
     if (media && media.data && media.mimeType) {
-      currentMessageParts.push({
+      currentParts.push({
         inlineData: {
           data: media.data,
-          mimeType: media.mimeType
-        }
+          mimeType: media.mimeType,
+        },
       });
     }
+
+    contents.push({
+      role: 'user',
+      parts: currentParts,
+    });
 
     // Stream the response
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -130,32 +125,44 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
-    const result = await chat.sendMessageStream(currentMessageParts);
+    const streamResponse = await ai.models.generateContentStream({
+      model: 'gemini-3.7-flash',
+      contents: contents,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+      },
+    });
 
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
-      if (text) {
-        res.write(text);
+    for await (const chunk of streamResponse) {
+      if (chunk.text) {
+        res.write(chunk.text);
       }
     }
 
     res.end();
   } catch (error) {
-    console.error('Chat error:', error.message);
+    console.error('Chat error:', error);
 
-    // Handle specific Gemini errors
-    if (error.message?.includes('API_KEY_INVALID')) {
-      return res.status(401).json({ error: 'Invalid API key. Please check your GEMINI_API_KEY.' });
+    const errorMsg = error?.message || 'Internal error';
+
+    if (errorMsg.includes('API_KEY_INVALID') || errorMsg.includes('API key not valid')) {
+      if (!res.headersSent) {
+        return res.status(401).json({ error: 'Invalid API key. Please check your GEMINI_API_KEY in Settings > Secrets.' });
+      }
     }
-    if (error.message?.includes('RATE_LIMIT_EXCEEDED')) {
-      return res.status(429).json({ error: 'API rate limit reached. Please wait a moment and try again.' });
+    if (errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429')) {
+      if (!res.headersSent) {
+        return res.status(429).json({ error: 'API rate limit reached. Please wait a moment and try again.' });
+      }
     }
-    if (error.message?.includes('SAFETY')) {
-      return res.status(400).json({ error: 'The response was blocked by safety filters. Please rephrase your question.' });
+    if (errorMsg.includes('SAFETY') || errorMsg.includes('blocked')) {
+      if (!res.headersSent) {
+        return res.status(400).json({ error: 'The response was blocked by safety filters. Please rephrase your question.' });
+      }
     }
 
     if (!res.headersSent) {
-      res.status(500).json({ error: `Server Error: ${error.message}` });
+      res.status(500).json({ error: `Server Error: ${errorMsg}` });
     } else {
       res.end();
     }
@@ -169,17 +176,8 @@ app.get('*', (req, res) => {
 
 // --------------- Start Server ---------------
 
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`
-    ╔═══════════════════════════════════════════╗
-    ║        🧬 Chatty Server                   ║
-    ║                                           ║
-    ║   Running on: http://localhost:${PORT}       ║
-    ║   Gemini:     ${geminiReady ? '✅ Connected' : '❌ Not configured'}            ║
-    ╚═══════════════════════════════════════════╝
-    `);
-  });
-}
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Chatty server running on http://0.0.0.0:${PORT}`);
+});
 
 module.exports = app;

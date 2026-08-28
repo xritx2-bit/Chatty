@@ -1,0 +1,6 @@
+{
+  "name": "Chatty — AI Study Buddy",
+  "description": "Free AI tutor for Nanotechnology, Biotechnology, AI/ML, and Cognitive Science students.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

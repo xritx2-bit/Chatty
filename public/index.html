@@ -2,220 +2,782 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Chatty — Free AI tutor for Nanotechnology, Biotechnology, AI/ML, and Cognitive Science students.">
-  <meta name="theme-color" content="#0a0b1a">
-  <title>Chatty — AI Study Buddy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <script>
+    // Ensure window.fetch has both getter & setter to prevent iframe wrapper TypeError
+    (function() {
+      try {
+        var _fetch = window.fetch;
+        Object.defineProperty(window, 'fetch', {
+          get: function() { return _fetch; },
+          set: function(fn) { _fetch = fn; },
+          configurable: true,
+          enumerable: true
+        });
+      } catch (e) {}
+    })();
+  </script>
+  <meta name="description" content="Chatty — Precision AI Study Buddy for Nanotechnology, Biotechnology, AI/ML, and Cognitive Science students.">
+  <meta name="theme-color" content="#030814">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Chatty — Precision AI Study Buddy</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/jpeg" href="logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Ambient Gradient Background Elements -->
+  <div class="ambient-glow glow-top-left"></div>
+  <div class="ambient-glow glow-center-right"></div>
+  <div class="ambient-glow glow-bottom-left"></div>
+  <div class="bokeh-particles" id="bokehContainer"></div>
+
   <div class="app" id="app">
 
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="logo">
-          <div class="logo-icon">
-            <img src="logo.jpg" alt="Chatty Logo" class="logo-img">
+    <!-- Top Navigation Bar (Editorial Brand Header) -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle history and navigation sidebar" title="Toggle Sidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </button>
+        <div class="nav-brand" id="brandLogo">
+          <div class="nav-brand-icon">
+            <img src="logo.jpg" alt="Chatty Logo" class="brand-img">
           </div>
-          <div class="logo-text">
-            <h1>Chatty</h1>
-            <span class="logo-subtitle">AI Study Buddy</span>
+          <div class="brand-titles">
+            <span class="brand-name">Chatty AI</span>
+            <span class="brand-tagline">NBIC Frontiers</span>
           </div>
         </div>
-        <button class="new-chat-btn" id="newChatBtn" title="New Chat">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      </div>
+
+      <nav class="nav-center" id="navLinks">
+        <button class="nav-link-btn active" data-view="chat" id="navChatBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Study Session
+        </button>
+        <button class="nav-link-btn" data-topic="nano" id="navNanoBtn">Nanotechnology</button>
+        <button class="nav-link-btn" data-topic="bio" id="navBioBtn">Biotechnology</button>
+        <button class="nav-link-btn" data-topic="aiml" id="navAimlBtn">AI &amp; ML</button>
+        <button class="nav-link-btn" data-topic="cogsci" id="navCogsciBtn">Cognitive Sci</button>
+        <button class="nav-link-btn" data-topic="nbic" id="navNbicBtn">NBIC Convergence</button>
+      </nav>
+
+      <div class="nav-right">
+        <!-- Cloud Sync Indicator & Auth State -->
+        <div class="cloud-sync-status" id="cloudSyncStatus" title="Cloud Sync Active">
+          <span class="sync-indicator-dot synced"></span>
+          <span class="sync-text" id="syncStatusText">Local Only</span>
+        </div>
+
+        <button class="nav-btn ghost-btn" id="privacyPolicyBtn" title="Privacy Policy &amp; Data Safety">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Privacy</span>
+        </button>
+
+        <button class="nav-btn ghost-btn" id="githubInfoBtn" title="GitHub Export &amp; Sync Guide">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+          </svg>
+          <span>GitHub</span>
+        </button>
+
+        <button class="nav-btn primary-action-btn" id="topNewChatBtn" title="Start a fresh conversation">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
+          <span>+ New Chat</span>
         </button>
-      </div>
 
-      <div class="sidebar-section">
-        <h3 class="sidebar-section-title">Quick Topics</h3>
-        <div class="topic-chips" id="topicChips">
-          <button class="topic-chip nano" data-prompt="Explain the basics of nanotechnology and its applications">
-            <span class="chip-dot"></span>Nanotechnology
-          </button>
-          <button class="topic-chip bio" data-prompt="Explain the central dogma of molecular biology">
-            <span class="chip-dot"></span>Biotechnology
-          </button>
-          <button class="topic-chip biochem" data-prompt="Explain enzyme kinetics and the Michaelis-Menten equation">
-            <span class="chip-dot"></span>Biochemistry
-          </button>
-          <button class="topic-chip aiml" data-prompt="Explain how neural networks learn through backpropagation">
-            <span class="chip-dot"></span>AI & ML
-          </button>
-          <button class="topic-chip cogsci" data-prompt="Explain the major theories of consciousness in cognitive science">
-            <span class="chip-dot"></span>Cognitive Science
-          </button>
-          <button class="topic-chip nbic" data-prompt="Explain NBIC convergence and how Nano, Bio, Info, and Cogno technologies connect">
-            <span class="chip-dot"></span>NBIC Convergence
+        <!-- Auth Button / User Profile -->
+        <button class="auth-btn signin-btn" id="navAuthBtn" title="Sign in with Google Account">
+          <svg class="google-icon" width="16" height="16" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+          </svg>
+          <span id="navAuthBtnText">Sign In</span>
+        </button>
+
+        <!-- Logged-in Avatar Menu Trigger (Hidden by default) -->
+        <div class="user-avatar-wrap" id="userAvatarWrap" style="display: none;">
+          <button class="user-avatar-btn" id="userAvatarBtn" title="Account Settings &amp; Cloud Sync">
+            <img src="" alt="User Avatar" id="userAvatarImg" class="user-avatar-img">
+            <span class="user-avatar-fallback" id="userAvatarFallback">U</span>
+            <span class="user-status-dot online"></span>
           </button>
         </div>
       </div>
+    </header>
 
-      <div class="sidebar-section">
-        <h3 class="sidebar-section-title">Exam Helpers</h3>
-        <div class="topic-chips">
-          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on nanotechnology with brief answers">
-            📝 Nano Questions
-          </button>
-          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on biotechnology and biochemistry with brief answers">
-            📝 Bio Questions
-          </button>
-          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on machine learning with brief answers">
-            📝 AI/ML Questions
-          </button>
-          <button class="topic-chip exam" data-prompt="Generate 5 important exam questions on cognitive science with brief answers">
-            📝 CogSci Questions
-          </button>
-        </div>
-      </div>
+    <!-- Main Body Layout: Left Sidebar + Center Chat Area -->
+    <div class="app-body">
 
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-text">
-          <strong>FOR CCT BY CCT</strong>
-          <br>
-          <span class="footer-small">Built with 💜 for NBIC Students<br>Powered by Google Gemini</span>
-        </div>
-      </div>
-    </aside>
+      <!-- Left Sidebar: Dedicated Chat History Column & Quick Hub -->
+      <aside class="sidebar" id="sidebar">
+        <!-- Sidebar Header / Actions -->
+        <div class="sidebar-top">
+          <div class="sidebar-title-row">
+            <span class="sidebar-heading">Chat History</span>
+            <span class="history-count-badge" id="historyCountBadge">0 sessions</span>
+          </div>
 
-    <!-- Mobile sidebar toggle -->
-    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-      </svg>
-    </button>
-
-    <!-- Main Chat Area -->
-    <main class="chat-main">
-      <!-- Chat Header -->
-      <header class="chat-header">
-        <div class="chat-header-left">
-          <h2 class="chat-title" id="chatTitle">New Conversation</h2>
-          <span class="chat-status" id="chatStatus">
-            <span class="status-dot online"></span>
-            Ready
-          </span>
-        </div>
-        <div class="chat-header-right">
-          <button class="header-btn" id="clearChatBtn" title="Clear chat">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <button class="create-chat-btn" id="sidebarNewChatBtn" title="Create a new conversation session">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
+            <span>Start New Session</span>
           </button>
-        </div>
-      </header>
 
-      <!-- Messages Container -->
-      <div class="messages-container" id="messagesContainer">
-        <!-- Welcome Screen -->
-        <div class="welcome-screen" id="welcomeScreen">
-          <div class="welcome-icon">
-            <div class="welcome-orb">
-              <div class="orb-ring ring-1"></div>
-              <div class="orb-ring ring-2"></div>
-              <div class="orb-ring ring-3"></div>
-              <img src="logo.jpg" alt="Chatty" class="orb-core-img">
-            </div>
+          <!-- History Search Field -->
+          <div class="history-search-wrap">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="historySearchInput" placeholder="Search conversations..." class="history-search-input" />
+            <button id="clearSearchBtn" class="clear-search-btn" title="Clear search" style="display: none;">✕</button>
           </div>
-          <h2 class="welcome-title">Welcome to <span class="gradient-text">Chatty</span></h2>
-          <p class="welcome-subtitle"><strong>FOR CCT BY CCT</strong><br>Your AI tutor for Nanotechnology, Biotechnology, AI/ML &amp; Cognitive Science</p>
-
-          <div class="welcome-cards">
-            <div class="welcome-card" data-prompt="Explain quantum dots and their applications in nanotechnology and biomedicine">
-              <div class="card-icon nano-icon">🔬</div>
-              <h3>Nanotechnology</h3>
-              <p>Quantum dots, CNTs, nanofabrication, nanomedicine</p>
-            </div>
-            <div class="welcome-card" data-prompt="Explain CRISPR-Cas9 gene editing — how it works, its applications, and ethical considerations">
-              <div class="card-icon bio-icon">🧬</div>
-              <h3>Biotechnology</h3>
-              <p>CRISPR, genetic engineering, bioinformatics</p>
-            </div>
-            <div class="welcome-card" data-prompt="Explain how transformer architecture works in deep learning, from attention mechanism to GPT">
-              <div class="card-icon aiml-icon">🤖</div>
-              <h3>AI & Machine Learning</h3>
-              <p>Neural networks, transformers, deep learning</p>
-            </div>
-            <div class="welcome-card" data-prompt="Explain the neural basis of memory formation and the different types of memory systems">
-              <div class="card-icon cogsci-icon">🧠</div>
-              <h3>Cognitive Science</h3>
-              <p>Neuroscience, consciousness, perception</p>
-            </div>
-          </div>
-
-          <p class="welcome-hint">Click a card above or type your question below to get started</p>
         </div>
 
-        <!-- Messages will be inserted here -->
-      </div>
+        <!-- History Sessions List -->
+        <div class="history-scroll-area" id="historyScrollArea">
+          <div class="history-sessions-list" id="historySessionsList">
+            <!-- Rendered dynamically -->
+          </div>
 
-      <!-- Input Area -->
-      <div class="input-area">
-        <div class="input-container">
-          <!-- File Preview Area -->
-          <div class="file-preview-container" id="filePreviewContainer" style="display: none;">
-            <div class="file-preview">
-              <img id="imagePreview" src="" alt="Preview" style="display: none;">
-              <div id="fileIconPreview" class="file-icon-preview" style="display: none;">📄</div>
-              <div class="file-details">
-                <span id="fileName" class="file-name">filename.jpg</span>
-                <span id="fileSize" class="file-size">1.2 MB</span>
+          <!-- Empty History Placeholder -->
+          <div class="history-empty" id="historyEmptyState" style="display: none;">
+            <div class="empty-icon">💬</div>
+            <p class="empty-title">No conversations yet</p>
+            <p class="empty-desc">Your past study threads and answers will appear here automatically.</p>
+          </div>
+        </div>
+
+        <!-- Sidebar Quick Topic Shortcuts -->
+        <div class="sidebar-section-divider"></div>
+        <div class="sidebar-topics-section">
+          <div class="section-label">
+            <span>High-Yield Modules</span>
+          </div>
+          <div class="quick-pills">
+            <button class="topic-chip nano" data-prompt="Explain quantum dots, size-dependent optical properties, and bioimaging applications">
+              <span class="chip-dot"></span>Nanotech
+            </button>
+            <button class="topic-chip bio" data-prompt="Explain CRISPR-Cas9 genome editing mechanisms, guide RNA design, and ethical challenges">
+              <span class="chip-dot"></span>Biotech
+            </button>
+            <button class="topic-chip aiml" data-prompt="Explain self-attention mechanism in Transformers and how GPT models generate tokens">
+              <span class="chip-dot"></span>AI &amp; ML
+            </button>
+            <button class="topic-chip cogsci" data-prompt="Compare Global Workspace Theory and Integrated Information Theory of consciousness">
+              <span class="chip-dot"></span>CogSci
+            </button>
+            <button class="topic-chip exam" data-prompt="Provide 5 high-yield exam practice questions on NBIC convergence with detailed rubrics">
+              📝 Exam Prep
+            </button>
+          </div>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+          <!-- Student Cloud Profile Widget in Sidebar -->
+          <div class="sidebar-user-card" id="sidebarUserCard">
+            <div class="user-card-avatar" id="sidebarUserAvatar">
+              <span id="sidebarUserAvatarText">👤</span>
+            </div>
+            <div class="user-card-info">
+              <span class="user-card-name" id="sidebarUserName">Guest Student</span>
+              <span class="user-card-status" id="sidebarUserEmail">Sign in to sync work across devices</span>
+            </div>
+            <button class="user-card-action-btn" id="sidebarAuthActionBtn" title="Account &amp; Sync Settings">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="sidebar-footer-actions">
+            <button class="clear-all-btn" id="clearAllHistoryBtn" title="Clear all saved history">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              Clear All
+            </button>
+            <button class="sync-now-btn" id="manualSyncBtn" title="Sync now with Cloud">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>Sync Cloud</span>
+            </button>
+          </div>
+
+          <div class="sidebar-footer-links">
+            <button class="sidebar-text-link" id="sidebarPrivacyBtn">Privacy Policy</button>
+            <span>&middot;</span>
+            <button class="sidebar-text-link" id="sidebarTermsBtn">Terms of Service</button>
+          </div>
+
+          <div class="sidebar-footer-brand">
+            <span>Powered by <strong>Gemini 3.7 Flash</strong></span>
+            <span class="cct-badge">FOR CCT BY CCT</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Chat Stage -->
+      <main class="chat-main" id="chatMain">
+
+        <!-- Active Conversation Header Bar -->
+        <div class="chat-sub-header">
+          <div class="chat-sub-left">
+            <div class="session-status-badge">
+              <span class="status-pulse"></span>
+              <span id="chatStatusText">Ready</span>
+            </div>
+            <h2 class="active-session-title" id="chatTitle" title="Click to rename session">New Conversation</h2>
+            <button class="rename-title-btn" id="renameSessionBtn" title="Rename this conversation">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="chat-sub-right">
+            <button class="header-action-btn" id="exportChatBtn" title="Export conversation as Markdown">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Export</span>
+            </button>
+            <button class="header-action-btn" id="clearActiveChatBtn" title="Clear current messages">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Messages & Welcome Container -->
+        <div class="messages-container" id="messagesContainer">
+
+          <!-- Editorial Welcome / Hero Screen (Inspired by reference aesthetics) -->
+          <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-hero-banner">
+              <div class="hero-top-badge">
+                <span class="badge-dot"></span>
+                <span>Interdisciplinary AI Tutor &middot; NBIC Convergence</span>
               </div>
-              <button class="remove-file-btn" id="removeFileBtn" title="Remove attachment">✕</button>
+              
+              <h1 class="hero-main-title">
+                Precision prep for<br>
+                <em>ambitious futures.</em>
+              </h1>
+
+              <div class="hero-editorial-card">
+                <p class="hero-description">
+                  We provide expert, conversational tutoring in Nanotechnology, Biotechnology, AI/ML, and Cognitive Science to master complex coursework, exam prep, and research frontiers with instant clarity.
+                </p>
+                <div class="hero-action-row">
+                  <button class="hero-cta-btn" id="heroStartBtn">
+                    <span>Ask a Question</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                  </button>
+                  <button class="hero-secondary-btn" id="heroExamBtn">
+                    <span>Generate Practice Exam</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Subject Cards Grid -->
+            <div class="welcome-cards-grid">
+              <div class="subject-card card-nano" data-prompt="Explain quantum dots and their size-tunable bandgap applications in nanotechnology and nanomedicine">
+                <div class="card-header">
+                  <div class="card-icon">🔬</div>
+                  <span class="card-subject-tag">Nano</span>
+                </div>
+                <h3 class="card-title">Nanotechnology</h3>
+                <p class="card-desc">Quantum dots, CNTs, nanofabrication, self-assembly, nano-drug delivery.</p>
+                <div class="card-footer">
+                  <span>Explore topic &rarr;</span>
+                </div>
+              </div>
+
+              <div class="subject-card card-bio" data-prompt="Explain CRISPR-Cas9 mechanism, PAM sequence requirements, and modern therapeutic applications">
+                <div class="card-header">
+                  <div class="card-icon">🧬</div>
+                  <span class="card-subject-tag">Biotech</span>
+                </div>
+                <h3 class="card-title">Biotechnology</h3>
+                <p class="card-desc">CRISPR gene editing, synthetic biology, enzyme kinetics, molecular pathways.</p>
+                <div class="card-footer">
+                  <span>Explore topic &rarr;</span>
+                </div>
+              </div>
+
+              <div class="subject-card card-aiml" data-prompt="Explain Transformer architecture in deep learning, focusing on Multi-Head Attention and Positional Encoding">
+                <div class="card-header">
+                  <div class="card-icon">🤖</div>
+                  <span class="card-subject-tag">AI / ML</span>
+                </div>
+                <h3 class="card-title">AI &amp; Machine Learning</h3>
+                <p class="card-desc">Neural architectures, Transformer attention, backpropagation, generative models.</p>
+                <div class="card-footer">
+                  <span>Explore topic &rarr;</span>
+                </div>
+              </div>
+
+              <div class="subject-card card-cogsci" data-prompt="Explain the neural correlates of working memory and the role of the prefrontal cortex">
+                <div class="card-header">
+                  <div class="card-icon">🧠</div>
+                  <span class="card-subject-tag">CogSci</span>
+                </div>
+                <h3 class="card-title">Cognitive Science</h3>
+                <p class="card-desc">Neuroscience of memory, perception, consciousness models, computational brain.</p>
+                <div class="card-footer">
+                  <span>Explore topic &rarr;</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="welcome-footer-hint">
+              <span>Select any subject above or type your question below with optional file attachments.</span>
             </div>
           </div>
-          <div class="input-wrapper">
-            <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.md,.csv" style="display: none;">
-            <button class="attach-btn" id="attachBtn" title="Attach file or image">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-              </svg>
-            </button>
-            <textarea
-              id="messageInput"
-              class="message-input"
-              placeholder="Ask Chatty anything about Nano, Bio, AI/ML, or Cognitive Science..."
-              rows="1"
-              maxlength="10000"
-            ></textarea>
-            <button class="send-btn" id="sendBtn" disabled title="Send message (Enter)">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-          </div>
-          <div class="input-footer">
-            <span class="char-count" id="charCount">0 / 10,000</span>
-            <span class="input-hint">Enter to send · Shift+Enter for new line</span>
+
+          <!-- Messages injected dynamically here -->
+        </div>
+
+        <!-- Bottom Input Bar -->
+        <div class="input-area">
+          <div class="input-container">
+            <!-- File Preview Area -->
+            <div class="file-preview-container" id="filePreviewContainer" style="display: none;">
+              <div class="file-preview">
+                <img id="imagePreview" src="" alt="Preview" style="display: none;">
+                <div id="fileIconPreview" class="file-icon-preview" style="display: none;">📄</div>
+                <div class="file-details">
+                  <span id="fileName" class="file-name">filename.jpg</span>
+                  <span id="fileSize" class="file-size">1.2 MB</span>
+                </div>
+                <button class="remove-file-btn" id="removeFileBtn" title="Remove attachment">✕</button>
+              </div>
+            </div>
+
+            <!-- Input Box -->
+            <div class="input-wrapper">
+              <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.md,.csv" style="display: none;">
+              <button class="attach-btn" id="attachBtn" title="Attach image, paper or notes (max 3.5MB)">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+              </button>
+              
+              <textarea
+                id="messageInput"
+                class="message-input"
+                placeholder="Ask Chatty about Nanotech, Biotech, AI/ML, CogSci, or exam concepts..."
+                rows="1"
+                maxlength="10000"
+              ></textarea>
+
+              <button class="send-btn" id="sendBtn" disabled title="Send prompt (Enter)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+
+            <div class="input-footer">
+              <span class="char-count" id="charCount">0 / 10,000</span>
+              <span class="input-hint"><strong>Enter</strong> to send &middot; <strong>Shift+Enter</strong> for newline &middot; Markdown &amp; Math supported</span>
+            </div>
           </div>
         </div>
-      </div>
-    </main>
 
-    <!-- Mobile overlay -->
+      </main>
+
+    </div>
+
+    <!-- Mobile sidebar overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Developer Credit Badge -->
-    <div class="dev-badge" id="devBadge">
-      <span class="dev-badge-icon">⚡</span>
-      <span class="dev-badge-text">Developed by <strong>Ritesh</strong></span>
+    <!-- GitHub Sync & Export Modal -->
+    <div class="modal-backdrop" id="githubModal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+          </div>
+          <div class="modal-title-group">
+            <h3>GitHub Push &amp; Export</h3>
+            <p>Deploy or sync this updated Chatty build to your GitHub repository</p>
+          </div>
+          <button class="modal-close-btn" id="closeGithubModalBtn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <strong>Export from Google AI Studio</strong>
+              <p>Click the <strong>Settings / Menu icon</strong> at the top-right of Google AI Studio, then select <strong>"Export to GitHub"</strong> or <strong>"Export as ZIP"</strong>.</p>
+            </div>
+          </div>
+
+          <div class="modal-step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <strong>Direct Git Push from Local / CLI</strong>
+              <p>If you cloned this repository locally:</p>
+              <div class="code-box">
+                <code>git add .<br>git commit -m "Add Blue Gradient theme & Chat History"<br>git push origin main</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <strong>Environment Secret</strong>
+              <p>Ensure <code>GEMINI_API_KEY</code> is set in your repository's deployment environment (Vercel, Railway, or Google Cloud Run).</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-action-btn" id="modalOkBtn">Got it, thanks!</button>
+        </div>
+      </div>
     </div>
+
+    <!-- Rename Session Modal -->
+    <div class="modal-backdrop" id="renameModal" style="display: none;">
+      <div class="modal-card mini-modal">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>Rename Conversation</h3>
+          </div>
+          <button class="modal-close-btn" id="closeRenameModalBtn">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="renameSessionInput" class="rename-input" placeholder="Enter session title..." maxlength="80" />
+        </div>
+        <div class="modal-footer">
+          <button class="modal-secondary-btn" id="cancelRenameBtn">Cancel</button>
+          <button class="modal-action-btn" id="saveRenameBtn">Save Title</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth Modal (Sign in with Google / Email / Guest) -->
+    <div class="modal-backdrop" id="authModal" style="display: none;">
+      <div class="modal-card auth-modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge auth-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="modal-title-group">
+            <h3>Student Cloud Login</h3>
+            <p>Access your study threads, exam notes, and research on any phone, tablet, or laptop.</p>
+          </div>
+          <button class="modal-close-btn" id="closeAuthModalBtn">✕</button>
+        </div>
+
+        <div class="modal-body auth-modal-body">
+          <div class="auth-benefit-banner">
+            <div class="benefit-item">
+              <span class="benefit-icon">☁️</span>
+              <span><strong>Seamless Multi-Device Sync</strong> &middot; Pick up studying where you left off.</span>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-icon">🔒</span>
+              <span><strong>Private &amp; Secure</strong> &middot; Protected with Firebase authentication &amp; encrypted rules.</span>
+            </div>
+          </div>
+
+          <!-- Google One-Click Sign In -->
+          <button class="google-signin-btn-large" id="googleSignInActionBtn">
+            <svg class="google-icon" width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>Continue with Google Account</span>
+          </button>
+
+          <div class="auth-divider">
+            <span>OR CONTINUE WITH EMAIL</span>
+          </div>
+
+          <!-- Email & Password Form -->
+          <form class="auth-email-form" id="authEmailForm">
+            <div class="auth-input-group">
+              <label for="authEmailInput">Email Address</label>
+              <input type="email" id="authEmailInput" placeholder="student@university.edu" required autocomplete="email" />
+            </div>
+            <div class="auth-input-group">
+              <label for="authPasswordInput">Password</label>
+              <input type="password" id="authPasswordInput" placeholder="••••••••" required autocomplete="current-password" minlength="6" />
+            </div>
+            <div class="auth-error-msg" id="authErrorMsg" style="display: none;"></div>
+            
+            <div class="auth-form-buttons">
+              <button type="button" class="auth-secondary-btn" id="emailSignUpBtn">Create Account</button>
+              <button type="submit" class="auth-primary-btn" id="emailSignInBtn">Sign In with Email</button>
+            </div>
+          </form>
+
+          <div class="guest-mode-note">
+            <span>Prefer offline-only? </span>
+            <button class="link-btn" id="continueAsGuestBtn">Continue as Guest (Local storage only)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Profile / Cloud Settings Modal (When Logged In) -->
+    <div class="modal-backdrop" id="userProfileModal" style="display: none;">
+      <div class="modal-card profile-modal-card">
+        <div class="modal-header">
+          <div class="profile-header-user">
+            <div class="profile-avatar-large" id="modalUserAvatarLarge">
+              <img src="" alt="Avatar" id="modalUserAvatarImg" style="display: none;">
+              <span id="modalUserAvatarText">👤</span>
+            </div>
+            <div class="profile-meta-group">
+              <h3 id="modalUserName">Student Name</h3>
+              <p id="modalUserEmail">student@email.com</p>
+              <span class="auth-provider-tag" id="modalAuthProvider">Google Account</span>
+            </div>
+          </div>
+          <button class="modal-close-btn" id="closeProfileModalBtn">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="profile-stats-grid">
+            <div class="stat-box">
+              <span class="stat-number" id="statCloudSessionsCount">0</span>
+              <span class="stat-label">Cloud Synced Chats</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="statTotalMessagesCount">0</span>
+              <span class="stat-label">Total Messages</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number status-active" id="statSyncStatusText">Active</span>
+              <span class="stat-label">Sync Connection</span>
+            </div>
+          </div>
+
+          <div class="cloud-sync-info-box">
+            <div class="sync-info-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>Cross-Device Cloud Syncing</span>
+            </div>
+            <p>Your conversations, formulas, practice exams, and notes are automatically saved to your private Cloud account. Sign in on any phone, iPad, or computer with this Google account to access your full study library.</p>
+          </div>
+
+          <!-- Play Store Mandated Account & Data Deletion Option -->
+          <div class="account-danger-zone">
+            <div class="danger-zone-header">
+              <span class="danger-zone-title">Account &amp; Cloud Data Management</span>
+            </div>
+            <p class="danger-zone-desc">Under Google Play Data Safety policies, you can delete your cloud account and all associated conversation history at any time.</p>
+            <button class="delete-account-btn" id="deleteAccountBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+              <span>Delete Account &amp; Purge All Cloud Data</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-footer profile-modal-footer">
+          <button class="sync-now-modal-btn" id="modalForceSyncBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Sync Cloud Now</span>
+          </button>
+          <button class="signout-btn" id="signOutBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generic Custom In-App Confirmation Modal (Replaces blocked window.confirm) -->
+    <div class="modal-backdrop" id="confirmModal" style="display: none;">
+      <div class="modal-card confirm-modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge danger-badge" id="confirmModalIcon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div class="modal-title-group">
+            <h3 id="confirmModalTitle">Confirm Action</h3>
+            <p id="confirmModalSubtitle">Please confirm to proceed.</p>
+          </div>
+          <button class="modal-close-btn" id="closeConfirmModalBtn">✕</button>
+        </div>
+        <div class="modal-body confirm-modal-body">
+          <p id="confirmModalMessage">Are you sure you want to proceed?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="auth-secondary-btn" id="confirmModalCancelBtn">Cancel</button>
+          <button class="confirm-danger-btn" id="confirmModalOkBtn">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Privacy Policy & Google Play Data Safety Modal -->
+    <div class="modal-backdrop" id="privacyModal" style="display: none;">
+      <div class="modal-card privacy-modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge policy-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <div class="modal-title-group">
+            <h3>Privacy Policy &amp; Play Store Data Safety</h3>
+            <p>Transparency, security, and student data protection standards.</p>
+          </div>
+          <button class="modal-close-btn" id="closePrivacyModalBtn">✕</button>
+        </div>
+
+        <div class="modal-body policy-modal-body">
+          <div class="policy-section">
+            <h4>1. Overview &amp; Educational Purpose</h4>
+            <p>Chatty is designed as a precision AI study companion for students and researchers in Nanotechnology, Biotechnology, AI/ML, Cognitive Science, and related STEM disciplines.</p>
+          </div>
+
+          <div class="policy-section">
+            <h4>2. Data Collection &amp; Firebase Storage</h4>
+            <ul>
+              <li><strong>Account Credentials:</strong> When you sign in with your Google Account, we store your unique User ID (UID), display name, and email address to authenticate your session and sync your data.</li>
+              <li><strong>Study Conversations &amp; Notes:</strong> Chat transcripts, formula inquiries, and practice problem sets are saved to Google Firebase Firestore under encrypted, user-isolated security rules (`request.auth.uid == userId`).</li>
+              <li><strong>Attachments &amp; Papers:</strong> Documents uploaded for study analysis are processed transiently in memory for context ingestion.</li>
+              <li><strong>Zero Ad Tracking:</strong> We do NOT sell student data, do NOT use advertising trackers, and do NOT share personal information with third-party data brokers.</li>
+            </ul>
+          </div>
+
+          <div class="policy-section">
+            <h4>3. Generative AI Safety &amp; Content Disclaimer</h4>
+            <p>Chatty utilizes Google Gemini 3.7 Flash generative reasoning models. While designed for high accuracy in STEM problem solving:</p>
+            <ul>
+              <li>AI responses are intended for study assistance and conceptual exploration. Students must verify high-stakes examination answers and lab calculations with primary academic sources.</li>
+              <li>You can report any inaccurate or inappropriate model response using the in-message report tool.</li>
+            </ul>
+          </div>
+
+          <div class="policy-section">
+            <h4>4. User Rights &amp; Google Play Account Deletion</h4>
+            <p>In full compliance with Google Play Store User Data policies, you hold full ownership of your data. You may:</p>
+            <ul>
+              <li>Delete individual chat sessions or all history directly from the sidebar.</li>
+              <li>Permanently delete your account and wipe all stored cloud documents from your Profile Settings at any time with a single tap.</li>
+            </ul>
+          </div>
+
+          <div class="policy-section">
+            <h4>5. Contact &amp; Compliance</h4>
+            <p>For questions or data deletion requests, contact the development team at <code>rixieplayz1@gmail.com</code>.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="auth-primary-btn" id="privacyModalAcceptBtn">I Understand</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report AI Message Modal (Play Store GenAI Content Moderation Requirement) -->
+    <div class="modal-backdrop" id="reportModal" style="display: none;">
+      <div class="modal-card report-modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge warning-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="modal-title-group">
+            <h3>Report AI Response</h3>
+            <p>Help maintain academic quality and safety standards.</p>
+          </div>
+          <button class="modal-close-btn" id="closeReportModalBtn">✕</button>
+        </div>
+        <div class="modal-body">
+          <label class="report-label" for="reportReasonSelect">Reason for reporting:</label>
+          <select id="reportReasonSelect" class="report-select">
+            <option value="inaccurate">Factually / Mathematically Inaccurate</option>
+            <option value="unsafe">Harmful / Inappropriate Content</option>
+            <option value="hallucination">Model Hallucination / Glitch</option>
+            <option value="other">Other Concern</option>
+          </select>
+          <label class="report-label" for="reportDetailsInput" style="margin-top: 10px;">Additional details (optional):</label>
+          <textarea id="reportDetailsInput" class="report-textarea" rows="3" placeholder="Describe the issue..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="auth-secondary-btn" id="cancelReportBtn">Cancel</button>
+          <button class="auth-primary-btn" id="submitReportBtn">Submit Feedback</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification for Cloud Sync / Status -->
+    <div class="toast-notification" id="toastNotification" style="display: none;">
+      <span class="toast-icon" id="toastIcon">☁️</span>
+      <span class="toast-message" id="toastMessage">All conversations synced to Cloud</span>
+    </div>
+
   </div>
 
-  <!-- Markdown rendering (via marked.js from CDN for simplicity) -->
+  <!-- Markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="app.js"></script>
+  <!-- Application & Firebase Auth Script -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
