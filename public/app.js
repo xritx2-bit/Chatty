@@ -961,7 +961,36 @@ async function sendMessage(textToSend = null) {
       }
     } else {
       console.error('Chat error:', err);
-      modelTextDiv.innerHTML = `<div style="color: #f87171; padding: 6px 0;">⚠️ <strong>Error:</strong> ${escapeHtml(err.message)}</div>`;
+      let displayError = err.message || 'An unexpected error occurred.';
+      try {
+        if (displayError.includes('{') && displayError.includes('}')) {
+          const match = displayError.match(/\{[\s\S]*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            if (parsed.error?.message) {
+              displayError = parsed.error.message;
+              if (typeof displayError === 'string' && displayError.includes('{')) {
+                try {
+                  const inner = JSON.parse(displayError);
+                  if (inner.error?.message) displayError = inner.error.message;
+                } catch (_) {}
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
+      modelTextDiv.innerHTML = `
+        <div style="color: #f87171; padding: 8px 0; font-size: 14px; line-height: 1.5;">
+          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+            <span>⚠️</span>
+            <span><strong>Connection Note:</strong> ${escapeHtml(displayError)}</span>
+          </div>
+          <button class="modal-action-btn" style="padding: 6px 14px; font-size: 12px; margin-top: 4px;" onclick="window.retryLastMessage && window.retryLastMessage()">
+            🔄 Retry Question
+          </button>
+        </div>
+      `;
     }
     setStatus('Ready');
   } finally {
@@ -971,6 +1000,24 @@ async function sendMessage(textToSend = null) {
     scrollToBottom();
   }
 }
+
+// Retry helper for connection error blocks
+window.retryLastMessage = function () {
+  const session = getActiveSession();
+  if (!session || session.messages.length === 0) return;
+  // Find last user message
+  const userMsgs = session.messages.filter((m) => m.role === 'user');
+  if (userMsgs.length === 0) return;
+  const lastUserMsg = userMsgs[userMsgs.length - 1];
+  // Pop the last user message from state so sendMessage will re-add and re-send it
+  const idx = session.messages.lastIndexOf(lastUserMsg);
+  if (idx !== -1) {
+    session.messages.splice(idx);
+    saveSessionState(session);
+    loadSessionIntoUI(session.id);
+  }
+  sendMessage(lastUserMsg.content);
+};
 
 // --------------- File Handling ---------------
 

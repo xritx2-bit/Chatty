@@ -13,6 +13,8 @@ const { SYSTEM_PROMPT } = require('./system-prompt');
 const app = express();
 const PORT = 3000;
 
+app.set('trust proxy', 1);
+
 // --------------- Middleware ---------------
 
 app.use(express.json({ limit: '10mb' }));
@@ -32,6 +34,7 @@ const chatLimiter = rateLimit({
   message: { error: 'Too many requests. Please wait a moment before sending another message.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 // --------------- Gemini Setup ---------------
@@ -119,19 +122,50 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
       parts: currentParts,
     });
 
+    // Helper to stream with automatic model fallback & retry for 503/transient errors
+    const modelsToTry = ['gemini-3.7-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    let streamResponse = null;
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        streamResponse = await ai.models.generateContentStream({
+          model: modelName,
+          contents: contents,
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+          },
+        });
+        if (streamResponse) break;
+      } catch (err) {
+        lastError = err;
+        const errText = String(err?.message || '');
+        const isTransient =
+          errText.includes('503') ||
+          errText.includes('UNAVAILABLE') ||
+          errText.includes('high demand') ||
+          errText.includes('overloaded') ||
+          errText.includes('429') ||
+          errText.includes('RESOURCE_EXHAUSTED');
+
+        if (!isTransient) {
+          throw err;
+        }
+        console.warn(`Model ${modelName} transient error (${errText.slice(0, 80)}...), trying fallback...`);
+        // Brief pause before trying next fallback model
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+
+    if (!streamResponse && lastError) {
+      throw lastError;
+    }
+
     // Stream the response
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-
-    const streamResponse = await ai.models.generateContentStream({
-      model: 'gemini-3.7-flash',
-      contents: contents,
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-      },
-    });
 
     for await (const chunk of streamResponse) {
       if (chunk.text) {
@@ -143,7 +177,26 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   } catch (error) {
     console.error('Chat error:', error);
 
-    const errorMsg = error?.message || 'Internal error';
+    let errorMsg = error?.message || 'Internal server error';
+
+    // Parse nested JSON in error message if present
+    try {
+      if (errorMsg.includes('{') && errorMsg.includes('}')) {
+        const jsonMatch = errorMsg.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.error?.message) {
+            errorMsg = parsed.error.message;
+            if (typeof errorMsg === 'string' && errorMsg.includes('{')) {
+              try {
+                const innerParsed = JSON.parse(errorMsg);
+                if (innerParsed.error?.message) errorMsg = innerParsed.error.message;
+              } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (_) {}
 
     if (errorMsg.includes('API_KEY_INVALID') || errorMsg.includes('API key not valid')) {
       if (!res.headersSent) {
@@ -160,9 +213,14 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
         return res.status(400).json({ error: 'The response was blocked by safety filters. Please rephrase your question.' });
       }
     }
+    if (errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE')) {
+      if (!res.headersSent) {
+        return res.status(503).json({ error: 'The AI model is currently experiencing temporary high demand. Please try again in a few seconds.' });
+      }
+    }
 
     if (!res.headersSent) {
-      res.status(500).json({ error: `Server Error: ${errorMsg}` });
+      res.status(500).json({ error: errorMsg });
     } else {
       res.end();
     }
