@@ -13,12 +13,22 @@
   },
   "dependencies": {
     "@google/genai": "^2.19.0",
+    "@vercel/analytics": "^2.0.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "marked": "^15.0.6"
   },
-  "keywords": ["ai", "chatbot", "study", "nbic", "nanotechnology", "biotechnology", "machine-learning", "cognitive-science"],
+  "keywords": [
+    "ai",
+    "chatbot",
+    "study",
+    "nbic",
+    "nanotechnology",
+    "biotechnology",
+    "machine-learning",
+    "cognitive-science"
+  ],
   "author": "NBIC Student",
   "license": "MIT"
 }
