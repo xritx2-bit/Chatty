@@ -123,20 +123,50 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     });
 
     // Helper to stream with automatic model fallback & retry for 503/transient errors
-    const modelsToTry = ['gemini-3.7-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
-    let streamResponse = null;
+    // gemini-3.1-flash-lite and gemini-3.7-flash with thinkingBudget: 0 give instant response start
+    const modelsToTry = [
+      'gemini-3.1-flash-lite',
+      'gemini-flash-latest',
+      'gemini-3.7-flash',
+    ];
+    let streamIterator = null;
+    let firstChunk = null;
     let lastError = null;
 
     for (const modelName of modelsToTry) {
       try {
-        streamResponse = await ai.models.generateContentStream({
+        const streamConfig = {
+          systemInstruction: SYSTEM_PROMPT,
+        };
+
+        // Disable thinking/reasoning pause for instant real-time streaming
+        if (modelName.includes('3.7') || modelName.includes('flash')) {
+          try {
+            streamConfig.thinkingConfig = {
+              thinkingBudget: 0,
+            };
+          } catch (_) {}
+        }
+
+        const candidateStream = await ai.models.generateContentStream({
           model: modelName,
           contents: contents,
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-          },
+          config: streamConfig,
         });
-        if (streamResponse) break;
+
+        // Pre-fetch the first chunk to guarantee model readiness and prevent mid-stream 503 failures
+        const iterator = candidateStream[Symbol.asyncIterator]();
+        const firstResult = await iterator.next();
+
+        if (firstResult && !firstResult.done) {
+          firstChunk = firstResult.value;
+          streamIterator = iterator;
+          break;
+        } else if (firstResult && firstResult.done) {
+          firstChunk = { text: '' };
+          streamIterator = iterator;
+          break;
+        }
       } catch (err) {
         lastError = err;
         const errText = String(err?.message || '');
@@ -146,29 +176,35 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
           errText.includes('high demand') ||
           errText.includes('overloaded') ||
           errText.includes('429') ||
-          errText.includes('RESOURCE_EXHAUSTED');
+          errText.includes('RESOURCE_EXHAUSTED') ||
+          errText.includes('thinkingConfig');
 
         if (!isTransient) {
+          // If it's a fatal validation/auth error, throw immediately
           throw err;
         }
-        console.warn(`Model ${modelName} transient error (${errText.slice(0, 80)}...), trying fallback...`);
-        // Brief pause before trying next fallback model
-        await new Promise((r) => setTimeout(r, 400));
+        // Seamlessly switch to next fallback model immediately
       }
     }
 
-    if (!streamResponse && lastError) {
+    if (!streamIterator && lastError) {
       throw lastError;
     }
 
-    // Stream the response
+    // Stream the response safely to client
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
-    for await (const chunk of streamResponse) {
-      if (chunk.text) {
+    if (firstChunk && firstChunk.text) {
+      res.write(firstChunk.text);
+    }
+
+    while (true) {
+      const { value: chunk, done } = await streamIterator.next();
+      if (done) break;
+      if (chunk && chunk.text) {
         res.write(chunk.text);
       }
     }

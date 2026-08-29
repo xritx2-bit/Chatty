@@ -161,6 +161,7 @@ const toastMessage = $('#toastMessage');
 // Hero CTAs
 const heroStartBtn = $('#heroStartBtn');
 const heroExamBtn = $('#heroExamBtn');
+const heroWellnessBtn = $('#heroWellnessBtn');
 
 // --------------- Application State ---------------
 const STORAGE_KEY = 'chatty_chat_sessions_v2';
@@ -749,7 +750,11 @@ function createMessageElement(role, content, isStreaming = false, media = null, 
   textDiv.className = 'message-text';
 
   if (isStreaming) {
-    textDiv.innerHTML = renderMarkdown(content) + '<span class="typing-cursor"></span>';
+    if (!content) {
+      textDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+    } else {
+      textDiv.innerHTML = renderMarkdown(content) + '<span class="typing-cursor"></span>';
+    }
   } else {
     textDiv.innerHTML = renderMarkdown(content);
   }
@@ -1671,6 +1676,14 @@ function setupEventListeners() {
     heroExamBtn.addEventListener('click', () => {
       sendMessage(
         'Generate 5 high-yield practice exam questions across Nanotechnology, Biotechnology, AI/ML, and Cognitive Science with comprehensive explanations and answer keys.'
+      );
+    });
+  }
+
+  if (heroWellnessBtn) {
+    heroWellnessBtn.addEventListener('click', () => {
+      sendMessage(
+        'I am feeling tired and stressed out with college workload. Can you give me a friendly wellness check-in, a gentle 4-7-8 breathing exercise, and practical motivation to get back on track?'
       );
     });
   }
